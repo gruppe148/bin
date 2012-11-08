@@ -1,0 +1,158 @@
+#!/bin/bash
+#################################################
+#						#
+#	Author: lemen				#
+#	email: les_lemen@ymail.com		#
+#						#
+#	Script for generating templates		#
+#	Time: Sat Oct 27 17:50:23 CEST 2012	#
+#	License: NONE				#
+#################################################	
+
+BASENAME=$(basename $0)
+
+TPWD=$(pwd | sed -e "s/\//\\\\\//g")
+
+SEC=$2
+
+TEMPLATESDIR=~/.templates
+
+#RegEx for Flags
+SFLAGEX="[a-zA-Z0-9\-]"
+FLAGEX="[a-zA-Z0-9\-]*"
+
+function usage()	{
+
+	printf "USAGE: $BASENAME Projectname Class modifier\n"
+	exit 1
+}
+
+function show_flags()	{
+
+	#template directory
+	DIR=$TEMPLATESDIR/$SEC/
+
+	if [ -d $DIR ]
+	then
+		for FILE in $(ls $DIR)
+		do
+			##whole line flags
+			cat $DIR/$FILE | grep "^_.*" | sed -e "s/_\($FLAGEX\)_.*/\1/" | sort -u 
+			##inline flags
+			cat $DIR/$FILE | grep "_$FLAGEX:" | tr "_" "\n" | grep "^$FLAGEX:" | sed -e "s/^\([a-zA-Z0-9&\-]*\):.*/\1/" | sort -u  
+		done
+	fi
+
+	exit 0	
+}
+
+if [ $# -lt 2 ]; then
+
+	usage
+fi
+
+if [ -d $TEMPLATESDIR/$1 ]; then
+
+	#template to choose
+	TEMPLATE=$1
+	
+	#template directory
+	DIR=$TEMPLATESDIR/$TEMPLATE
+
+	#cycle
+	shift 1
+else
+	#show option 
+	[ $1 = "show" ] && show_flags
+
+	printf "Not supported\n"
+	exit 1
+fi
+
+
+#shift is needed to prvide name as second argument
+NAME=$1;
+
+#make flags new arguments
+shift 1;
+
+#makefile
+if [ -f $DIR/makefile -a ! -f ./makefile ]; then 
+
+	cp $DIR/makefile ./makefile
+
+	echo "makefile created" 
+else
+	echo "makefile exists"
+fi
+
+#copy templates to curent directory with NAME.EXTENSION
+for FILE in $( ls $DIR )
+do
+	if [ $FILE != makefile ]
+	then
+		#extension
+		EXT=${FILE##*.}
+
+		NEW=$NAME.$EXT
+
+		if [ -f $NEW ]
+		then
+			echo $NEW exists
+		else
+			cp $DIR/$FILE $NEW
+
+			echo $NEW created
+		fi
+	fi
+done
+
+#read FLAGS and delete remove markup
+while [ $# -gt 0 ]
+do
+	FLAG=$1
+	UNDERSCORE=_
+
+	for FILE in $( ls $NAME* )
+	do
+		REPLACE=$UNDERSCORE$FLAG$UNDERSCORE
+		MREPLACE="$UNDERSCORE$FLAG:\([& a-zA-Z0-9:\-]*\)$UNDERSCORE"
+		sed -i .bak -e s/$REPLACE// $FILE
+		sed -i .bak -e s/$REPLACE// makefile
+		sed -i .bak -e "s/$MREPLACE/\1/" $FILE
+		sed -i .bak -e "s/$MREPLACE/\1/" makefile
+	done
+
+	shift 1
+done
+
+#delete lines with flag markup
+for FILE in $( ls $NAME* )
+do
+	UNDERSCORE=_
+	MREPLACE="$UNDERSCORE$FLAGEX:\([& a-zA-Z0-9:\-]*\)$UNDERSCORE"
+	sed -i .bak -e "s/$MREPLACE//" $FILE
+	sed -i .bak -e "s/$MREPLACE//" makefile
+
+	sed -i .bak -e "s/PWD/$TPWD/g" makefile
+	sed -i .bak -e "s/PWD/$TPWD/g" $FILE
+
+	sed -i .bak -e "/^_$FLAGEX_/d" $FILE 
+	sed -i .bak -e "s/template_name/$NAME/g" $FILE
+	sed -i .bak -e "/^_$FLAGEX_/d" makefile 
+	sed -i .bak -e "s/template_name/$NAME/g" makefile
+done
+
+## Template aliased 
+#Template becomes template
+#for FILE in $(ls $NAME* )
+#do
+#	sed -i .bak -e "s/Template/template/g" $FILE
+#	sed -i .bak -e "s/Template/template/g" makefile
+#done
+
+#remove tmp files
+rm $NAME*bak
+rm makefile.bak
+
+exit 0

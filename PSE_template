@@ -1,0 +1,27 @@
+#!/bin/bash
+
+BASENAME=$(basename $0)
+
+function usage()	{
+
+	echo "Usage: $BASENAME Nummer_des Übungsbalsttes"
+
+	exit 0
+}
+
+[ $# -lt 1 ]  && usage
+
+template java PSE_2012_U_$1_Sl_19_Grp_148 PSE $1 $2 $3 $4 $5 $6 $7 $8 $9
+cp ~/Documents/uni/PSE/gruppe_148/bin/.gitignore .
+  
+
+ln -s ~/Documents/uni/PSE/mediadateien/ ./mediadateien
+ln -s ~/Documents/uni/PSE/resources/ ./resources
+
+mint_project
+
+[ -d ./tex ] || mkdir tex
+
+cd tex
+
+template xelatex PSE_2012_U_$1_Sl_19_Grp_148 PSE bash

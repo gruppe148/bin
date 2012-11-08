@@ -1,0 +1,14 @@
+#!/bin/bash
+
+[ -d ./tex ] || mkdir tex
+
+FILENAME=mintedinput.tex
+
+echo "\\begingroup" > $FILENAME
+echo "\\catcode\`\\_=12\\relax" >> $FILENAME
+
+find `pwd` -name \*java -exec printf "{}\n\\\\inputminted{java}{{}}\n" \; >> $FILENAME
+
+echo "\\endgroup" >> $FILENAME
+
+mv $FILENAME tex
